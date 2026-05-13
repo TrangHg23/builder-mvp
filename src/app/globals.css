@@ -137,4 +137,7 @@
     outline: 2px solid var(--primary);
     outline-offset: -2px;
   }
+  [data-mode="preview"] [data-node-id]:hover {
+    outline: none;
+  }
 }
