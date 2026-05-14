@@ -6,68 +6,169 @@ export interface ControlDefinition {
   label: string;
   propName: string;
   type: ControlType;
-  options?: string[]; 
+  options?: string[];
+  isStyle?: boolean;
 }
 
-export interface ComponentDefinition {
+export interface ControlGroup {
+  title: string;
+  controls: ControlDefinition[];
+}
+
+export interface InspectorTabs {
+  design: ControlGroup[];
+  events?: ControlGroup[];
+  effects?: ControlGroup[];
+}
+
+export interface NodeDefinition<TProps = any> {
   type: string;
-  component: React.ComponentType<any>;
   label: string;
+  defaultProps: TProps;
+  defaultStyles: React.CSSProperties;
+  renderer: React.ComponentType<TProps & { style?: React.CSSProperties; children?: React.ReactNode }>;
   icon?: React.ReactNode;
-  defaultProps?: Record<string, any>;
-  controls?: ControlDefinition[];
+  inspectorTabs: InspectorTabs;
 }
 
-const Placeholder = ({ children, ...props }: any) => (
-  <div {...props} className="p-4 border border-dashed border-muted-foreground/30 rounded min-h-[50px]">
+// RENDERERS
+
+// Heading Renderer
+const HeadingRenderer: React.FC<{
+  text: string;
+  level: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  style?: React.CSSProperties;
+}> = ({ text, level = "h2", style, ...props }) => {
+  const Tag = level;
+  return (
+    <Tag style={style} {...props}>
+      {text}
+    </Tag>
+  );
+};
+
+// 2. Box/Container Renderer
+const BoxRenderer: React.FC<{ style?: React.CSSProperties; children?: React.ReactNode }> = ({ 
+  children, 
+  style, 
+  ...props 
+}) => (
+  <div style={style} {...props}>
     {children}
   </div>
 );
 
-const Box = ({ children, className, style, ...props }: any) => (
-  <div className={className} style={style} {...props}>
-    {children}
-  </div>
-);
-
-const Text = ({ content, className, style, ...props }: any) => (
-  <span className={className} style={style} {...props}>
-    {content || "Text Block"}
+// 3. Text Renderer
+const TextRenderer: React.FC<{
+  content: string;
+  style?: React.CSSProperties;
+}> = ({ content, style, ...props }) => (
+  <span style={style} {...props}>
+    {content}
   </span>
 );
 
-export const componentRegistry: Record<string, ComponentDefinition> = {
+// Registry
+export const componentRegistry: Record<string, NodeDefinition> = {
   container: {
     type: "container",
-    component: Box,
     label: "Container",
-    defaultProps: { 
-      props: {},
-      styles: { padding: "1rem", minHeight: "100px", width: "100%" }
+    defaultProps: {},
+    defaultStyles: {
+      padding: "20px",
+      minHeight: "100px",
+      backgroundColor: "transparent",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      width: "100%",
     },
-    controls: [
-      { label: "Background Color", propName: "backgroundColor", type: "color" },
-      { label: "Padding", propName: "padding", type: "text" },
-    ],
+    renderer: BoxRenderer,
+    inspectorTabs: {
+      design: [
+        {
+          title: "Layout",
+          controls: [
+            { label: "Padding", propName: "padding", type: "text", isStyle: true },
+            { label: "Gap", propName: "gap", type: "text", isStyle: true },
+          ],
+        },
+        {
+          title: "Appearance",
+          controls: [
+            { label: "Background", propName: "backgroundColor", type: "color", isStyle: true },
+          ],
+        },
+      ],
+    },
+  },
+  heading: {
+    type: "heading",
+    label: "Heading",
+    defaultProps: {
+      text: "Đây là tiêu đề",
+      level: "h2",
+    },
+    defaultStyles: {
+      fontSize: "24px",
+      fontWeight: "bold",
+      margin: "0px",
+      color: "inherit",
+    },
+    renderer: HeadingRenderer,
+    inspectorTabs: {
+      design: [
+        {
+          title: "Content",
+          controls: [
+            { label: "Text", propName: "text", type: "text" },
+            { 
+              label: "Level", 
+              propName: "level", 
+              type: "select", 
+              options: ["h1", "h2", "h3", "h4", "h5", "h6"] 
+            },
+          ],
+        },
+        {
+          title: "Typography",
+          controls: [
+            { label: "Size", propName: "fontSize", type: "text", isStyle: true },
+            { label: "Color", propName: "color", type: "color", isStyle: true },
+            { label: "Weight", propName: "fontWeight", type: "select", options: ["normal", "bold", "500", "600"], isStyle: true },
+          ],
+        },
+      ],
+    },
   },
   text: {
     type: "text",
-    component: Text,
-    label: "Text",
-    defaultProps: { 
-      props: { content: "New Text Block" },
-      styles: { fontSize: "16px", color: "inherit" }
+    label: "Text Block",
+    defaultProps: {
+      content: "Nhập nội dung văn bản tại đây...",
     },
-    controls: [
-      { label: "Content", propName: "content", type: "text" },
-      { label: "Font Size", propName: "fontSize", type: "text" },
-      { label: "Text Color", propName: "color", type: "color" },
-    ],
-  },
-  placeholder: {
-    type: "placeholder",
-    component: Placeholder,
-    label: "Placeholder",
+    defaultStyles: {
+      fontSize: "16px",
+      color: "inherit",
+    },
+    renderer: TextRenderer,
+    inspectorTabs: {
+      design: [
+        {
+          title: "Content",
+          controls: [
+            { label: "Text", propName: "content", type: "text" },
+          ],
+        },
+        {
+          title: "Typography",
+          controls: [
+            { label: "Size", propName: "fontSize", type: "text", isStyle: true },
+            { label: "Color", propName: "color", type: "color", isStyle: true },
+          ],
+        },
+      ],
+    },
   },
 };
 

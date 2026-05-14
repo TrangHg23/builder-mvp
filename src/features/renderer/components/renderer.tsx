@@ -17,8 +17,8 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
     return null;
   }
 
-  const definition = componentRegistry[node.type] || componentRegistry.placeholder;
-  const Component = definition.component;
+  const definition = componentRegistry[node.type] || componentRegistry.container;
+  const Component = definition.renderer;
 
   return (
     <Component {...node.props} style={node.styles} data-node-id={node.id}>
