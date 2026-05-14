@@ -68,6 +68,33 @@ const TextRenderer: React.FC<{
   </span>
 );
 
+// 4. Image Renderer
+const ImageRenderer: React.FC<{
+  src: string;
+  alt: string;
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+}> = ({ src, alt, style, children, ...props }) => (
+  <img 
+    src={src || "https://placehold.co/600x400?text=Image"} 
+    alt={alt} 
+    style={{ ...style, maxWidth: "100%", height: "auto" }} 
+    {...props} 
+  />
+);
+
+// 5. Button Renderer
+const ButtonRenderer: React.FC<{
+  text: string;
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+}> = ({ text, style, children, ...props }) => (
+  <button style={style} {...props}>
+    {text}
+    {children}
+  </button>
+);
+
 // Registry
 export const componentRegistry: Record<string, NodeDefinition> = {
   container: {
@@ -106,18 +133,33 @@ export const componentRegistry: Record<string, NodeDefinition> = {
     type: "heading",
     label: "Heading",
     defaultProps: {
-      text: "Đây là tiêu đề",
-      level: "h2",
+      text: "Heading",
+      level: "h1",
     },
     defaultStyles: {
-      fontSize: "24px",
+      width: "200px",
+      height: "51px",
+      fontSize: "42px",
       fontWeight: "bold",
+      fontFamily: "Montserrat, sans-serif",
+      lineHeight: "1.2",
+      letterSpacing: "-0.5px",
+      textAlign: "left",
+      color: "#000000",
       margin: "0px",
-      color: "inherit",
+      display: "flex",
+      alignItems: "center",
     },
     renderer: HeadingRenderer,
     inspectorTabs: {
       design: [
+        {
+          title: "Size",
+          controls: [
+            { label: "Width", propName: "width", type: "text", isStyle: true },
+            { label: "Height", propName: "height", type: "text", isStyle: true },
+          ],
+        },
         {
           title: "Content",
           controls: [
@@ -133,9 +175,13 @@ export const componentRegistry: Record<string, NodeDefinition> = {
         {
           title: "Typography",
           controls: [
+            { label: "Font Family", propName: "fontFamily", type: "text", isStyle: true },
+            { label: "Weight", propName: "fontWeight", type: "select", options: ["normal", "bold", "500", "600", "700", "800"], isStyle: true },
             { label: "Size", propName: "fontSize", type: "text", isStyle: true },
+            { label: "Line Height", propName: "lineHeight", type: "text", isStyle: true },
+            { label: "Letter Spacing", propName: "letterSpacing", type: "text", isStyle: true },
+            { label: "Align", propName: "textAlign", type: "select", options: ["left", "center", "right", "justify"], isStyle: true },
             { label: "Color", propName: "color", type: "color", isStyle: true },
-            { label: "Weight", propName: "fontWeight", type: "select", options: ["normal", "bold", "500", "600"], isStyle: true },
           ],
         },
       ],
@@ -145,7 +191,7 @@ export const componentRegistry: Record<string, NodeDefinition> = {
     type: "text",
     label: "Text Block",
     defaultProps: {
-      content: "Nhập nội dung văn bản tại đây...",
+      content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ultrices non orci nec eleifend. Sed scelerisque lobortis neque eget feugiat. Curabitur ullamcorper ex at porttitor mollis. Curabitur varius lorem nisl, non egestas leo feugiat at. Curabitur volutpat sagittis arcu, ut blandit velit sagittis vel. Vivamus erat mauris, mattis a neque vel, pretium varius ipsum. Phasellus non mauris in dolor luctus suscipit vel ac massa. Sed fringilla lorem sed metus bibendum faucibus.",
     },
     defaultStyles: {
       fontSize: "16px",
@@ -165,6 +211,74 @@ export const componentRegistry: Record<string, NodeDefinition> = {
           controls: [
             { label: "Size", propName: "fontSize", type: "text", isStyle: true },
             { label: "Color", propName: "color", type: "color", isStyle: true },
+          ],
+        },
+      ],
+    },
+  },
+  image: {
+    type: "image",
+    label: "Image",
+    defaultProps: {
+      src: "https://placehold.co/600x400?text=Image",
+      alt: "Placeholder image",
+    },
+    defaultStyles: {
+      borderRadius: "8px",
+      width: "100%",
+    },
+    renderer: ImageRenderer,
+    inspectorTabs: {
+      design: [
+        {
+          title: "Source",
+          controls: [
+            { label: "Image URL", propName: "src", type: "text" },
+            { label: "Alt Text", propName: "alt", type: "text" },
+          ],
+        },
+        {
+          title: "Size & Style",
+          controls: [
+            { label: "Width", propName: "width", type: "text", isStyle: true },
+            { label: "Border Radius", propName: "borderRadius", type: "text", isStyle: true },
+          ],
+        },
+      ],
+    },
+  },
+  button: {
+    type: "button",
+    label: "Button",
+    defaultProps: {
+      text: "Click me",
+    },
+    defaultStyles: {
+      padding: "10px 20px",
+      backgroundColor: "#3c79d9",
+      color: "white",
+      borderRadius: "6px",
+      border: "none",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "500",
+    },
+    renderer: ButtonRenderer,
+    inspectorTabs: {
+      design: [
+        {
+          title: "Content",
+          controls: [
+            { label: "Button Text", propName: "text", type: "text" },
+          ],
+        },
+        {
+          title: "Appearance",
+          controls: [
+            { label: "Background", propName: "backgroundColor", type: "color", isStyle: true },
+            { label: "Text Color", propName: "color", type: "color", isStyle: true },
+            { label: "Padding", propName: "padding", type: "text", isStyle: true },
+            { label: "Radius", propName: "borderRadius", type: "text", isStyle: true },
           ],
         },
       ],
