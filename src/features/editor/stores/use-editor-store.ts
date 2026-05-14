@@ -6,6 +6,7 @@ interface EditorActions {
   addNode: (node: NodeSchema, parentId: NodeId, index?: number) => void;
   removeNode: (id: NodeId) => void;
   updateNodeProps: (id: NodeId, props: Record<string, any>) => void;
+  updateNodeStyles: (id: NodeId, styles: Record<string, any>) => void;
   selectNode: (id: NodeId | null) => void;
   moveNode: (id: NodeId, targetParentId: NodeId, index: number) => void;
   setMode: (mode: "edit" | "preview") => void;
@@ -16,7 +17,13 @@ const initialState: EditorState = {
     root: {
       id: "root",
       type: "container",
-      props: { className: "min-h-screen w-full bg-background p-4" },
+      props: {},
+      styles: { 
+        minHeight: "100vh", 
+        width: "100%", 
+        backgroundColor: "hsl(var(--background))",
+        padding: "1rem" 
+      },
       children: [],
       parentId: null,
     },
@@ -58,9 +65,24 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           const node = state.nodes[id];
           if (!node || id === state.rootNodeId) return state;
 
-          const { [id]: _, ...remainingNodes } = state.nodes;
+          const remainingNodes = { ...state.nodes };
           
-          // Remove from parent
+          // Recursive helper to collect all descendant IDs
+          const getAllDescendantIds = (nodeId: string): string[] => {
+            const childIds = remainingNodes[nodeId]?.children || [];
+            return childIds.reduce((acc: string[], childId: string) => {
+              return [...acc, childId, ...getAllDescendantIds(childId)];
+            }, []);
+          };
+
+          const idsToDelete = [id, ...getAllDescendantIds(id)];
+          
+          // Delete all identified nodes
+          idsToDelete.forEach((nodeId) => {
+            delete remainingNodes[nodeId];
+          });
+          
+          // Remove from parent's children list
           if (node.parentId) {
             const parent = remainingNodes[node.parentId];
             if (parent) {
@@ -73,7 +95,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
 
           return {
             nodes: remainingNodes,
-            selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
+            selectedNodeId: idsToDelete.includes(state.selectedNodeId as string) ? null : state.selectedNodeId,
           };
         }),
 
@@ -86,6 +108,19 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             nodes: {
               ...state.nodes,
               [id]: { ...node, props: { ...node.props, ...props } },
+            },
+          };
+        }),
+
+      updateNodeStyles: (id, styles) =>
+        set((state) => {
+          const node = state.nodes[id];
+          if (!node) return state;
+
+          return {
+            nodes: {
+              ...state.nodes,
+              [id]: { ...node, styles: { ...node.styles, ...styles } },
             },
           };
         }),

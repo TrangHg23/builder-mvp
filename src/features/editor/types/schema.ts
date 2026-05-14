@@ -14,6 +14,7 @@ export interface NodeSchema {
   id: NodeId;
   type: string;
   props: Record<string, PropertyValue>;
+  styles: Record<string, PropertyValue>;
   children: NodeId[];
   parentId: NodeId | null;
 }
