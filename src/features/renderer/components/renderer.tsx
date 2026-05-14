@@ -21,7 +21,7 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
   const Component = definition.component;
 
   return (
-    <Component {...node.props} data-node-id={node.id}>
+    <Component {...node.props} style={node.styles} data-node-id={node.id}>
       {node.children.map((childId) => (
         <Renderer key={childId} nodeId={childId} />
       ))}
