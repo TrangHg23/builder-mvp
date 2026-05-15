@@ -17,6 +17,8 @@ export interface NodeSchema {
   styles: Record<string, PropertyValue>;
   children: NodeId[];
   parentId: NodeId | null;
+  x?: number;
+  y?: number;
 }
 
 export interface EditorState {

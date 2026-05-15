@@ -9,6 +9,7 @@ interface EditorActions {
   updateNodeStyles: (id: NodeId, styles: Record<string, any>) => void;
   selectNode: (id: NodeId | null) => void;
   moveNode: (id: NodeId, targetParentId: NodeId, index: number) => void;
+  updateNodePosition: (id: NodeId, x: number, y: number) => void;
   setMode: (mode: "edit" | "preview") => void;
 }
 
@@ -152,6 +153,19 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           nodes[id] = { ...node, parentId: targetParentId };
 
           return { nodes };
+        }),
+
+      updateNodePosition: (id, x, y) =>
+        set((state) => {
+          const node = state.nodes[id];
+          if (!node) return state;
+
+          return {
+            nodes: {
+              ...state.nodes,
+              [id]: { ...node, x, y },
+            },
+          };
         }),
 
       setMode: (mode) => set({ mode }),
