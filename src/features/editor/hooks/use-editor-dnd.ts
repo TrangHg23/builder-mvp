@@ -117,6 +117,10 @@ export const useEditorDnd = () => {
       direction 
     } = resizeRef.current;
     
+    // Tạm thời vô hiệu hóa logic cho kéo ngang (l, r) 
+    // để không bị dùng nhầm logic resize chéo
+    if (direction === "l" || direction === "r") return;
+    
     let newWidth = initialWidth;
     let newHeight = initialHeight;
     let newX = initialX;

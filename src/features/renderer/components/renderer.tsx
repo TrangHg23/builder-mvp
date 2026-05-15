@@ -101,6 +101,8 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
           <ResizeHandle nodeId={nodeId} direction="tr" />
           <ResizeHandle nodeId={nodeId} direction="bl" />
           <ResizeHandle nodeId={nodeId} direction="br" />
+          <ResizeHandle nodeId={nodeId} direction="l" />
+          <ResizeHandle nodeId={nodeId} direction="r" />
           
           <div className={cn(
             "absolute inset-0 border pointer-events-none",
