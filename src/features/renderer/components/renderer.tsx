@@ -6,7 +6,7 @@ import { componentRegistry } from "./component-registry";
 import { NodeId } from "@/features/editor/types/schema";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { cn } from "@/utils/cn";
-import { Trash2, Copy } from "lucide-react";
+import { Trash2, Copy, Ban } from "lucide-react";
 import { ResizeHandle } from "./resize-handle";
 
 interface RendererProps {
@@ -14,7 +14,15 @@ interface RendererProps {
 }
 
 export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
-  const { nodes, selectedNodeId, selectNode, mode, removeNode } = useEditorStore();
+  const { 
+    nodes, 
+    selectedNodeId, 
+    selectNode, 
+    mode, 
+    removeNode,
+    isDraggingNode,
+    isOverDroppable
+  } = useEditorStore();
   const node = nodes[nodeId];
   const isSelected = selectedNodeId === nodeId;
   const isEditMode = mode === "edit";
@@ -75,7 +83,8 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
         isSelected && "z-30 cursor-pointer",
         isOver && node.type === "container" && "bg-primary/5 ring-2 ring-primary ring-inset",
         node.x !== undefined && "absolute",
-        isDragging && "opacity-50 z-50 pointer-events-none"
+        isDragging && "z-50 pointer-events-none cursor-grabbing",
+        isDragging && !isOverDroppable && "bg-destructive/20 ring-2 ring-destructive ring-inset"
       )}
       style={{
         ...(node.x !== undefined ? {
@@ -93,7 +102,10 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
           <ResizeHandle nodeId={nodeId} direction="bl" />
           <ResizeHandle nodeId={nodeId} direction="br" />
           
-          <div className="absolute inset-0 border border-dashed border-primary pointer-events-none" />
+          <div className={cn(
+            "absolute inset-0 border pointer-events-none",
+            isDragging ? "border-solid border-primary border-2" : "border-dashed border-primary"
+          )} />
         </>
       )}
 
@@ -112,10 +124,14 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
         </div>
       )}
 
-      {isSelected && isEditMode && (
+      {(isSelected || isDragging) && isEditMode && (
         <div 
-          className="absolute -top-6 left-0 bg-primary text-primary-foreground text-[10px] px-2 py-0.5 rounded-t-sm font-bold uppercase tracking-wider shadow-sm flex items-center gap-1"
+          className={cn(
+            "absolute -top-6 left-0 text-primary-foreground text-[10px] px-2 py-0.5 rounded-t-sm font-bold uppercase tracking-wider shadow-sm flex items-center gap-1 z-50",
+            isDragging && !isOverDroppable ? "bg-destructive" : "bg-primary"
+          )}
         >
+          {isDragging && !isOverDroppable && <Ban size={10} />}
           {definition.label}
         </div>
       )}

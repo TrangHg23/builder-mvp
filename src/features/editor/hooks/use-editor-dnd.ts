@@ -20,7 +20,8 @@ export const useEditorDnd = () => {
     addNode, 
     selectNode, 
     updateNodePosition, 
-    updateNodeStyles 
+    updateNodeStyles,
+    setDnDStatus
   } = useEditorStore();
 
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -52,15 +53,24 @@ export const useEditorDnd = () => {
     })
   );
 
+  const [active, setActive] = React.useState<any>(null);
+
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-
-    console.log('active====== ', active)
-    setActiveId(active.id as string);
+    const { active: activeItem } = event;
+    setActive(activeItem);
+    setActiveId(activeItem.id as string);
     setIsOverDroppable(false);
+    
+    // Set global cursor to grabbing only if we are moving a node, not resizing
+    if (activeItem.data.current?.type !== "resize-handle") {
+      document.body.style.cursor = 'grabbing';
+      setDnDStatus(true, false);
+    }
+    
+    // console.log('active====== ', activeItem)
 
-    if (active.data.current?.type === "resize-handle") {
-      const nodeId = active.data.current.nodeId;
+    if (activeItem.data.current?.type === "resize-handle") {
+      const nodeId = activeItem.data.current.nodeId;
       const node = nodes[nodeId];
       if (node) {
         const currentWidth = parseInt(String(node.styles.width || "0"));
@@ -80,14 +90,16 @@ export const useEditorDnd = () => {
           initialFontSize: fontSize,
           aspectRatio: width / height || 1,
           fontRatio: fontSize / height || 0.8,
-          direction: active.data.current.direction,   // hướng kéo (tl, tr, bl, br)
+          direction: activeItem.data.current.direction,   // hướng kéo (tl, tr, bl, br)
         };
       }
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    setIsOverDroppable(!!event.over);
+    const isOver = !!event.over;
+    setIsOverDroppable(isOver);
+    setDnDStatus(true, isOver);
   };
 
   const handleDragMove = (event: any) => {
@@ -142,19 +154,24 @@ export const useEditorDnd = () => {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+    const { active: activeItem, over } = event;
+    setActive(null);
     setActiveId(null);
     setIsOverDroppable(false);
     resizeRef.current = null;
+    setDnDStatus(false, false);
+    
+    // Reset global cursor
+    document.body.style.cursor = '';
 
-    if (over && active.data.current?.type === "library-item") {
-      const componentType = active.data.current.componentType;
+    if (over && activeItem.data.current?.type === "library-item") {
+      const componentType = activeItem.data.current.componentType;
       const definition = componentRegistry[componentType];
       
       if (definition) {
         const newNodeId = nanoid();
         const overRect = over.rect;
-        const activeRect = active.rect.current.translated;
+        const activeRect = activeItem.rect.current.translated;
         
         let x = 0;
         let y = 0;
@@ -185,11 +202,11 @@ export const useEditorDnd = () => {
         addNode(newNode, over.id as string);
         selectNode(newNodeId);
       }
-    } else if (over && active.data.current?.type === "canvas-node") {
-      const nodeId = active.data.current.nodeId;
+    } else if (over && activeItem.data.current?.type === "canvas-node") {
+      const nodeId = activeItem.data.current.nodeId;
       const node = nodes[nodeId];
       const overRect = over.rect;
-      const activeRect = active.rect.current.translated;
+      const activeRect = activeItem.rect.current.translated;
 
       if (node && overRect && activeRect) {
         let newX = activeRect.left - overRect.left;
@@ -212,6 +229,7 @@ export const useEditorDnd = () => {
 
   return {
     sensors,
+    active,
     activeId,
     isOverDroppable,
     handleDragStart,

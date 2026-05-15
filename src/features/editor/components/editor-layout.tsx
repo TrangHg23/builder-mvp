@@ -29,6 +29,7 @@ export const EditorLayout: React.FC = () => {
   const { handleSave } = useEditorActions();
   const {
     sensors,
+    active,
     activeId,
     isOverDroppable,
     handleDragStart,
@@ -114,7 +115,7 @@ export const EditorLayout: React.FC = () => {
         </aside>
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeId && !activeId.startsWith("resize-") ? (
+        {active && active.data.current?.type === "library-item" ? (
           <div className={cn(
             "px-4 py-2 rounded-md shadow-lg transition-all duration-200 border flex items-center gap-2",
             isOverDroppable 
@@ -122,7 +123,9 @@ export const EditorLayout: React.FC = () => {
               : "bg-destructive/20 text-destructive border-destructive/50 cursor-no-drop backdrop-blur-sm"
           )}>
             {!isOverDroppable && <Ban size={14} />}
-            <span className="font-medium text-sm">{activeId}</span>
+            <span className="font-medium text-sm capitalize">
+              {active.data.current.componentType}
+            </span>
           </div>
         ) : null}
       </DragOverlay>
