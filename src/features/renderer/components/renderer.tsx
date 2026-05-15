@@ -6,7 +6,8 @@ import { componentRegistry } from "./component-registry";
 import { NodeId } from "@/features/editor/types/schema";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { cn } from "@/utils/cn";
-import { Trash2, Copy, ArrowUpDown, Eye, Lock } from "lucide-react";
+import { Trash2, Copy } from "lucide-react";
+import { ResizeHandle } from "./resize-handle";
 
 interface RendererProps {
   nodeId: NodeId;
@@ -66,10 +67,12 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
     <div
       ref={combinedRef}
       onClick={handleClick}
+      {...attributes}
+      {...listeners}
       className={cn(
         "relative transition-all duration-200 group",
         isEditMode && "hover:outline hover:outline-1 hover:outline-primary/50",
-        isSelected && "z-30",
+        isSelected && "z-30 cursor-pointer",
         isOver && node.type === "container" && "bg-primary/5 ring-2 ring-primary ring-inset",
         node.x !== undefined && "absolute",
         isDragging && "opacity-50 z-50 pointer-events-none"
@@ -85,10 +88,11 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
       {/* Corner Markers for Selection */}
       {isSelected && isEditMode && (
         <>
-          <div className="absolute -top-1 -left-1 size-2 border-t-2 border-l-2 border-primary z-10" />
-          <div className="absolute -top-1 -right-1 size-2 border-t-2 border-r-2 border-primary z-10" />
-          <div className="absolute -bottom-1 -left-1 size-2 border-b-2 border-l-2 border-primary z-10" />
-          <div className="absolute -bottom-1 -right-1 size-2 border-b-2 border-r-2 border-primary z-10" />
+          <ResizeHandle nodeId={nodeId} direction="tl" />
+          <ResizeHandle nodeId={nodeId} direction="tr" />
+          <ResizeHandle nodeId={nodeId} direction="bl" />
+          <ResizeHandle nodeId={nodeId} direction="br" />
+          
           <div className="absolute inset-0 border border-dashed border-primary pointer-events-none" />
         </>
       )}
