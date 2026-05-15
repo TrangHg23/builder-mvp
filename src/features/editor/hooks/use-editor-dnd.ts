@@ -12,7 +12,7 @@ import { nanoid } from "nanoid";
 import { useEditorStore } from "../stores/use-editor-store";
 import { componentRegistry } from "@/features/renderer/components/component-registry";
 import { formatNumber } from "@/utils/number";
-import { MIN_NODE_WIDTH, MIN_NODE_HEIGHT, MIN_FONT_SIZE } from "../constants";
+import { MIN_HORIZONTAL_WIDTH, MIN_DIAGONAL_WIDTH, MIN_DIAGONAL_HEIGHT, MIN_FONT_SIZE } from "../constants";
 
 export const useEditorDnd = () => {
   const { 
@@ -74,9 +74,15 @@ export const useEditorDnd = () => {
       const node = nodes[nodeId];
       if (node) {
         const currentWidth = parseInt(String(node.styles.width || "0"));
-        const currentHeight = parseInt(String(node.styles.height || "0"));
+        let currentHeight = parseInt(String(node.styles.height || "0"));
         const currentFontSize = parseInt(String(node.styles.fontSize || "0"));
         
+        // Nếu height là "auto", lấy giá trị thực tế từ DOM để tính toán tỉ lệ ban đầu
+        if (isNaN(currentHeight)) {
+          const rect = activeItem.rect.current.initial;
+          currentHeight = rect?.height || 0;
+        }
+
         const width = isNaN(currentWidth) ? 0 : currentWidth;
         const height = isNaN(currentHeight) ? 0 : currentHeight;
         const fontSize = isNaN(currentFontSize) ? 0 : currentFontSize;
@@ -112,45 +118,81 @@ export const useEditorDnd = () => {
       initialHeight, 
       initialX, 
       initialY, 
+      initialFontSize,
       aspectRatio, 
       fontRatio,
       direction 
     } = resizeRef.current;
     
-    // Tạm thời vô hiệu hóa logic cho kéo ngang (l, r) 
-    // để không bị dùng nhầm logic resize chéo
-    if (direction === "l" || direction === "r") return;
-    
     let newWidth = initialWidth;
     let newHeight = initialHeight;
     let newX = initialX;
     let newY = initialY;
-
-    const dx = direction.includes("l") ? -delta.x : delta.x;
-    const dy = direction.includes("t") ? -delta.y : delta.y;
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-      newWidth = Math.max(MIN_NODE_WIDTH, initialWidth + dx);
-      newHeight = newWidth / aspectRatio;
-    } else {
-      newHeight = Math.max(MIN_NODE_HEIGHT, initialHeight + dy);
-      newWidth = newHeight * aspectRatio;
-    }
-
-    if (direction.includes("l")) {
-      newX = initialX + (initialWidth - newWidth);
-    }
-    if (direction.includes("t")) {
-      newY = initialY + (initialHeight - newHeight);
-    }
-
-    const newFontSize = Math.max(MIN_FONT_SIZE, formatNumber(newHeight * fontRatio));
     
-    updateNodeStyles(id, { 
-      width: `${formatNumber(newWidth)}px`, 
-      height: `${formatNumber(newHeight)}px`,
-      fontSize: `${newFontSize}px`
-    });
+    const isHorizontalOnly = direction === "l" || direction === "r";
+    
+    if (isHorizontalOnly) {
+      const dx = direction === "l" ? -delta.x : delta.x;
+      newWidth = Math.max(MIN_HORIZONTAL_WIDTH, initialWidth + dx);
+      
+      if (direction === "l") {
+        newX = initialX + (initialWidth - newWidth);
+      }
+
+      // Đo chiều cao thực tế từ DOM để hiển thị lên Inspector
+      const element = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement;
+      let measuredHeight = initialHeight;
+      
+      if (element) {
+        // Gán tạm width để trình duyệt tính toán lại height ngay lập tức
+        element.style.width = `${formatNumber(newWidth)}px`;
+        measuredHeight = element.scrollHeight;
+      }
+
+      updateNodeStyles(id, { 
+        width: `${formatNumber(newWidth)}px`, 
+        height: `${formatNumber(measuredHeight)}px`,
+        fontSize: `${initialFontSize}px`
+      });
+    } else {
+      const dx = direction.includes("l") ? -delta.x : delta.x;
+      const dy = direction.includes("t") ? -delta.y : delta.y;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        newWidth = Math.max(MIN_DIAGONAL_WIDTH, initialWidth + dx);
+        newHeight = newWidth / aspectRatio;
+        
+        // Kiểm tra chéo: nếu height sau tính toán bị nhỏ hơn min, phải đẩy ngược lại
+        if (newHeight < MIN_DIAGONAL_HEIGHT) {
+          newHeight = MIN_DIAGONAL_HEIGHT;
+          newWidth = newHeight * aspectRatio;
+        }
+      } else {
+        newHeight = Math.max(MIN_DIAGONAL_HEIGHT, initialHeight + dy);
+        newWidth = newHeight * aspectRatio;
+        
+        // Kiểm tra chéo: nếu width sau tính toán bị nhỏ hơn min, phải đẩy ngược lại
+        if (newWidth < MIN_DIAGONAL_WIDTH) {
+          newWidth = MIN_DIAGONAL_WIDTH;
+          newHeight = newWidth / aspectRatio;
+        }
+      }
+
+      if (direction.includes("l")) {
+        newX = initialX + (initialWidth - newWidth);
+      }
+      if (direction.includes("t")) {
+        newY = initialY + (initialHeight - newHeight);
+      }
+
+      const newFontSize = Math.max(MIN_FONT_SIZE, formatNumber(newHeight * fontRatio));
+      
+      updateNodeStyles(id, { 
+        width: `${formatNumber(newWidth)}px`, 
+        height: `${formatNumber(newHeight)}px`,
+        fontSize: `${newFontSize}px`
+      });
+    }
 
     if (newX !== initialX || newY !== initialY) {
       updateNodePosition(id, newX, newY);

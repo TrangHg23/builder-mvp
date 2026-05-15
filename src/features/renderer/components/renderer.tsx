@@ -129,7 +129,7 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
       {(isSelected || isDragging) && isEditMode && (
         <div 
           className={cn(
-            "absolute -top-6 left-0 text-primary-foreground text-[10px] px-2 py-0.5 rounded-t-sm font-bold uppercase tracking-wider shadow-sm flex items-center gap-1 z-50",
+            "absolute -top-6 left-0 text-primary-foreground text-[9px] px-2 py-0.5 rounded-t-sm font-bold tracking-wider shadow-sm flex items-center gap-1 z-50 whitespace-nowrap",
             isDragging && !isOverDroppable ? "bg-destructive" : "bg-primary"
           )}
         >

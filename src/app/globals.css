@@ -132,6 +132,8 @@
   }
   [data-node-id] {
     @apply transition-all duration-200;
+    word-break: break-word;
+    white-space: normal;
   }
   [data-node-id]:hover {
     outline: 2px solid var(--primary);
