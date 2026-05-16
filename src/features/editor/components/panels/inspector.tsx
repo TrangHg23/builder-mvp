@@ -8,6 +8,7 @@ import { componentRegistry } from "@/features/renderer/components/component-regi
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/utils/cn";
 
 export const Inspector: React.FC = () => {
   const { selectedNodeId, nodes, updateNodeProps, updateNodeStyles } = useEditorStore();
@@ -55,6 +56,17 @@ export const Inspector: React.FC = () => {
         
         const newStyles = presets[value as string] || presets.H2;
         updateNodeStyles(node.id, newStyles);
+
+        // trigger update height when changing heading level
+        requestAnimationFrame(() => {
+          const el = document.querySelector(`[data-node-id="${node.id}"]`);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            updateNodeStyles(node.id, { 
+              height: `${rect.height.toFixed(2)}px` 
+            });
+          }
+        });
       }
     }
   };

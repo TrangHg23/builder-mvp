@@ -57,38 +57,6 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
     }
   }, [isEditing]);
 
-  // Tự động cập nhật chiều cao khung bao khi props (như Level H1-H6) hoặc styles thay đổi
-  React.useEffect(() => {
-    if (isEditMode && nodeId !== "root" && !isDraggingNode) {
-      const wrapper = document.querySelector(`[data-wrapper-id="${nodeId}"]`) as HTMLElement;
-      const element = document.querySelector(`[data-node-id="${nodeId}"]`) as HTMLElement;
-      
-      if (wrapper && element) {
-        const originalWrapperHeight = wrapper.style.height;
-        const originalElementHeight = element.style.height;
-        
-        // Giải phóng hoàn toàn để trình duyệt tính toán kích thước tự nhiên của nội dung
-        wrapper.style.height = "auto";
-        element.style.height = "auto";
-        
-        // Sử dụng getBoundingClientRect để lấy độ cao thực tế chính xác (kể cả số lẻ)
-        const measuredHeight = element.getBoundingClientRect().height;
-        
-        wrapper.style.height = originalWrapperHeight;
-        element.style.height = originalElementHeight;
-        
-        const currentHeightStr = String(node.styles.height || "0").replace('px', '');
-        const currentHeight = parseFloat(currentHeightStr);
-        
-        // Cập nhật Store nếu:
-        // 1. Chiều cao hiện tại là "auto" (NaN)
-        // 2. Sai lệch thực tế > 0.5px
-        if (measuredHeight > 0 && (isNaN(currentHeight) || Math.abs(measuredHeight - currentHeight) > 0.5)) {
-          updateNodeStyles(nodeId, { height: `${measuredHeight.toFixed(2)}px` });
-        }
-      }
-    }
-  }, [isEditMode, nodeId, node?.props, node?.styles, updateNodeStyles, isDraggingNode]); 
 
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
