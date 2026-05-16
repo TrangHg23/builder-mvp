@@ -37,6 +37,12 @@ export const useEditorDnd = () => {
     aspectRatio: number;
     fontRatio: number;
     direction: string;
+    // Transient session state
+    currentScale: number;
+    translateX: number;
+    translateY: number;
+    lastStoreUpdate: number | null;
+    lastRafId: number | null;
   } | null>(null);
 
   const sensors = useSensors(
@@ -76,12 +82,6 @@ export const useEditorDnd = () => {
         const currentWidth = parseInt(String(node.styles.width || "0"));
         let currentHeight = parseInt(String(node.styles.height || "0"));
         const currentFontSize = parseInt(String(node.styles.fontSize || "0"));
-        
-        // Nếu height là "auto", lấy giá trị thực tế từ DOM để tính toán tỉ lệ ban đầu
-        if (isNaN(currentHeight)) {
-          const rect = activeItem.rect.current.initial;
-          currentHeight = rect?.height || 0;
-        }
 
         const width = isNaN(currentWidth) ? 0 : currentWidth;
         const height = isNaN(currentHeight) ? 0 : currentHeight;
@@ -96,8 +96,19 @@ export const useEditorDnd = () => {
           initialFontSize: fontSize,
           aspectRatio: width / height || 1,
           fontRatio: fontSize / height || 0.8,
-          direction: activeItem.data.current.direction,   // hướng kéo (tl, tr, bl, br)
+          direction: activeItem.data.current.direction,
+          currentScale: 1,
+          translateX: 0,
+          translateY: 0,
+          lastStoreUpdate: null,
+          lastRafId: null,
         };
+
+        // Layer promotion for GPU acceleration
+        const wrapper = document.querySelector(`[data-wrapper-id="${nodeId}"]`) as HTMLElement;
+        const element = document.querySelector(`[data-node-id="${nodeId}"]`) as HTMLElement;
+        if (wrapper) wrapper.style.willChange = 'transform, width, height, top, left';
+        if (element) element.style.willChange = 'transform, width, height';
       }
     }
   };
@@ -130,73 +141,98 @@ export const useEditorDnd = () => {
     let newY = initialY;
     
     const isHorizontalOnly = direction === "l" || direction === "r";
+    const isDiagonal = !isHorizontalOnly;
     
-    if (isHorizontalOnly) {
-      const dx = direction === "l" ? -delta.x : delta.x;
-      newWidth = Math.max(MIN_HORIZONTAL_WIDTH, initialWidth + dx);
-      
-      if (direction === "l") {
-        newX = initialX + (initialWidth - newWidth);
-      }
-
-      // Đo chiều cao thực tế từ DOM để hiển thị lên Inspector
+    // Performance Optimization: Batch DOM mutations in requestAnimationFrame
+    if (resizeRef.current.lastRafId) cancelAnimationFrame(resizeRef.current.lastRafId);
+    
+    resizeRef.current.lastRafId = requestAnimationFrame(() => {
+      const wrapper = document.querySelector(`[data-wrapper-id="${id}"]`) as HTMLElement;
       const element = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement;
-      let measuredHeight = initialHeight;
       
-      if (element) {
-        // Gán tạm width để trình duyệt tính toán lại height ngay lập tức
-        element.style.width = `${formatNumber(newWidth)}px`;
-        measuredHeight = element.scrollHeight;
-      }
+      let constrainedWidth = initialWidth;
+      let constrainedHeight = initialHeight;
+      let constrainedFontSize = initialFontSize;
+      let translateX = 0;
+      let translateY = 0;
 
-      updateNodeStyles(id, { 
-        width: `${formatNumber(newWidth)}px`, 
-        height: `${formatNumber(measuredHeight)}px`,
-        fontSize: `${initialFontSize}px`
-      });
-    } else {
-      const dx = direction.includes("l") ? -delta.x : delta.x;
-      const dy = direction.includes("t") ? -delta.y : delta.y;
-
-      if (Math.abs(dx) > Math.abs(dy)) {
-        newWidth = Math.max(MIN_DIAGONAL_WIDTH, initialWidth + dx);
-        newHeight = newWidth / aspectRatio;
+      if (isHorizontalOnly) {
+        const dx = direction === "l" ? -delta.x : delta.x;
+        constrainedWidth = Math.max(MIN_HORIZONTAL_WIDTH, initialWidth + dx);
         
-        // Kiểm tra chéo: nếu height sau tính toán bị nhỏ hơn min, phải đẩy ngược lại
-        if (newHeight < MIN_DIAGONAL_HEIGHT) {
-          newHeight = MIN_DIAGONAL_HEIGHT;
-          newWidth = newHeight * aspectRatio;
+        if (direction === "l") {
+          translateX = initialWidth - constrainedWidth;
         }
       } else {
-        newHeight = Math.max(MIN_DIAGONAL_HEIGHT, initialHeight + dy);
-        newWidth = newHeight * aspectRatio;
-        
-        // Kiểm tra chéo: nếu width sau tính toán bị nhỏ hơn min, phải đẩy ngược lại
-        if (newWidth < MIN_DIAGONAL_WIDTH) {
-          newWidth = MIN_DIAGONAL_WIDTH;
-          newHeight = newWidth / aspectRatio;
+        const dx = direction.includes("l") ? -delta.x : delta.x;
+        const dy = direction.includes("t") ? -delta.y : delta.y;
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+          constrainedWidth = Math.max(MIN_DIAGONAL_WIDTH, initialWidth + dx);
+          constrainedHeight = constrainedWidth / aspectRatio;
+          
+          if (constrainedHeight < MIN_DIAGONAL_HEIGHT) {
+            constrainedHeight = MIN_DIAGONAL_HEIGHT;
+            constrainedWidth = constrainedHeight * aspectRatio;
+          }
+        } else {
+          constrainedHeight = Math.max(MIN_DIAGONAL_HEIGHT, initialHeight + dy);
+          constrainedWidth = constrainedHeight * aspectRatio;
+          
+          if (constrainedWidth < MIN_DIAGONAL_WIDTH) {
+            constrainedWidth = MIN_DIAGONAL_WIDTH;
+            constrainedHeight = constrainedWidth / aspectRatio;
+          }
         }
+        
+        const scale = constrainedWidth / initialWidth;
+        constrainedFontSize = Math.max(MIN_FONT_SIZE, initialFontSize * scale);
+
+        if (direction.includes("l")) translateX = initialWidth - constrainedWidth;
+        if (direction.includes("t")) translateY = initialHeight - constrainedHeight;
       }
 
-      if (direction.includes("l")) {
-        newX = initialX + (initialWidth - newWidth);
-      }
-      if (direction.includes("t")) {
-        newY = initialY + (initialHeight - newHeight);
-      }
+      // Lưu trạng thái tạm thời
+      resizeRef.current!.currentScale = constrainedWidth / initialWidth;
+      resizeRef.current!.translateX = translateX;
+      resizeRef.current!.translateY = translateY;
 
-      const newFontSize = Math.max(MIN_FONT_SIZE, formatNumber(newHeight * fontRatio));
+      // 1. THAO TÁC TRỰC TIẾP TRÊN DOM (60FPS Visuals)
+      if (wrapper) {
+        wrapper.style.transform = 'none'; // Đảm bảo không bị dính transform cũ
+        wrapper.style.width = `${constrainedWidth}px`;
+        wrapper.style.height = isHorizontalOnly ? 'auto' : `${constrainedHeight}px`;
+        wrapper.style.fontSize = `${constrainedFontSize}px`;
+        
+        // Di chuyển vị trí thực tế để giữ điểm neo
+        if (translateX !== 0) wrapper.style.left = `${initialX + translateX}px`;
+        if (translateY !== 0) wrapper.style.top = `${initialY + translateY}px`;
+      }
       
-      updateNodeStyles(id, { 
-        width: `${formatNumber(newWidth)}px`, 
-        height: `${formatNumber(newHeight)}px`,
-        fontSize: `${newFontSize}px`
-      });
-    }
+      if (element) {
+        element.style.width = '100%';
+        element.style.height = '100%';
+        element.style.fontSize = 'inherit';
+      }
 
-    if (newX !== initialX || newY !== initialY) {
-      updateNodePosition(id, newX, newY);
-    }
+      // 2. THROTTLED STORE UPDATE (Cập nhật số trên Inspector không gây lag)
+      const now = Date.now();
+      if (!resizeRef.current!.lastStoreUpdate || now - resizeRef.current!.lastStoreUpdate > 32) {
+        updateNodeStyles(id, {
+          width: `${formatNumber(constrainedWidth)}px`,
+          height: isHorizontalOnly ? (element?.scrollHeight ? `${element.scrollHeight}px` : 'auto') : `${formatNumber(constrainedHeight)}px`,
+          fontSize: `${formatNumber(constrainedFontSize)}px`,
+        });
+        
+        if (translateX !== 0 || translateY !== 0) {
+          updateNodePosition(id, initialX + translateX, initialY + translateY);
+        }
+        
+        resizeRef.current!.lastStoreUpdate = now;
+      }
+      
+      if (resizeRef.current) resizeRef.current.lastRafId = null;
+    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -204,11 +240,51 @@ export const useEditorDnd = () => {
     setActive(null);
     setActiveId(null);
     setIsOverDroppable(false);
-    resizeRef.current = null;
-    setDnDStatus(false, false);
-    
     // Reset global cursor
     document.body.style.cursor = '';
+
+    // Final Commit Phase for Resize
+    if (resizeRef.current) {
+      const { id, initialWidth, initialHeight, initialFontSize, initialX, initialY, currentScale, translateX, translateY, lastRafId, direction } = resizeRef.current;
+      if (lastRafId) cancelAnimationFrame(lastRafId);
+
+      const finalWidth = initialWidth * currentScale;
+      let finalHeight = initialHeight * currentScale;
+      let finalFontSize = initialFontSize;
+      const finalX = initialX + translateX;
+      const finalY = initialY + translateY;
+
+      // Reset layer promotion only - let React handle style updates atomically
+      const wrapper = document.querySelector(`[data-wrapper-id="${id}"]`) as HTMLElement;
+      const element = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement;
+      if (wrapper) wrapper.style.willChange = '';
+      if (element) element.style.willChange = '';
+
+      // Diagonal resize scales font
+      if (direction.length > 1) {
+        finalFontSize = Math.max(MIN_FONT_SIZE, initialFontSize * currentScale);
+      } else {
+        // Horizontal resize needs actual height measurement for text wrapping
+        if (element) {
+          const originalWidth = element.style.width;
+          element.style.width = `${formatNumber(finalWidth)}px`;
+          finalHeight = element.scrollHeight;
+          // Don't reset width here, let React rerender take over
+        }
+      }
+
+      updateNodeStyles(id, {
+        width: `${formatNumber(finalWidth)}px`,
+        height: `${formatNumber(finalHeight)}px`,
+        fontSize: `${formatNumber(finalFontSize)}px`,
+      });
+      
+      if (translateX !== 0 || translateY !== 0) {
+        updateNodePosition(id, finalX, finalY);
+      }
+      
+      resizeRef.current = null;
+    }
 
     if (over && activeItem.data.current?.type === "library-item") {
       const componentType = activeItem.data.current.componentType;

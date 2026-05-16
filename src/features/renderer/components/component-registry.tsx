@@ -34,17 +34,6 @@ export interface NodeDefinition<TProps = any> {
 // RENDERERS
 
 // Heading Renderer
-const fontWeightMap: Record<string, number> = {
-  thin: 100,
-  light: 300,
-  normal: 400,
-  medium: 500,
-  semibold: 600,
-  bold: 700,
-  extrabold: 800,
-  black: 900,
-};
-
 const HeadingRenderer: React.FC<{
   text: string;
   level: string;
@@ -52,17 +41,8 @@ const HeadingRenderer: React.FC<{
 }> = ({ text, level = "h2", style, ...props }) => {
   const Tag = (level.toLowerCase() || "h2") as any;
   
-  // Convert descriptive font weight to numeric for CSS
-  const finalStyle = { ...style };
-  if (style?.fontWeight && typeof style.fontWeight === "string") {
-    const weightName = style.fontWeight.toLowerCase();
-    if (fontWeightMap[weightName]) {
-      finalStyle.fontWeight = fontWeightMap[weightName];
-    }
-  }
-
   return (
-    <Tag style={finalStyle} {...props}>
+    <Tag style={style} {...props}>
       {text}
     </Tag>
   );
@@ -196,7 +176,7 @@ export const componentRegistry: Record<string, NodeDefinition> = {
           title: "Typography",
           controls: [
             { label: "Font Family", propName: "fontFamily", type: "text", isStyle: true },
-            { label: "Weight", propName: "fontWeight", type: "select", options: ["thin", "light", "normal", "medium", "semibold", "bold", "extrabold", "black"], isStyle: true },
+            { label: "Weight", propName: "fontWeight", type: "select", options: ["Thin", "Light", "Normal", "Medium", "Semibold", "Bold", "Extrabold", "Black"], isStyle: true },
             { label: "Size", propName: "fontSize", type: "text", isStyle: true },
             { label: "Line Height", propName: "lineHeight", type: "text", isStyle: true },
             { label: "Letter Spacing", propName: "letterSpacing", type: "text", isStyle: true },
@@ -275,7 +255,7 @@ export const componentRegistry: Record<string, NodeDefinition> = {
       border: "none",
       cursor: "pointer",
       fontSize: "14px",
-      fontWeight: "500",
+      fontWeight: "Medium",
     },
     renderer: ButtonRenderer,
     inspectorTabs: {

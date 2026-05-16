@@ -13,6 +13,17 @@ interface RendererProps {
   nodeId: NodeId;
 }
 
+const fontWeightMap: Record<string, number> = {
+  thin: 100,
+  light: 300,
+  normal: 400,
+  medium: 500,
+  semibold: 600,
+  bold: 700,
+  extrabold: 800,
+  black: 900,
+};
+
 export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
   const { 
     nodes, 
@@ -22,6 +33,7 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
     removeNode,
     updateNodeProps,
     updateNodeStyles,
+    isDraggingNode,
     isOverDroppable
   } = useEditorStore();
   const node = nodes[nodeId];
@@ -30,23 +42,36 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
 
   // Tự động cập nhật chiều cao khung bao khi props (như Level H1-H6) hoặc styles thay đổi
   React.useEffect(() => {
-    if (isEditMode && nodeId !== "root") {
+    if (isEditMode && nodeId !== "root" && !isDraggingNode) {
+      const wrapper = document.querySelector(`[data-wrapper-id="${nodeId}"]`) as HTMLElement;
       const element = document.querySelector(`[data-node-id="${nodeId}"]`) as HTMLElement;
-      if (element) {
-        // Tạm thời bỏ height cố định để đo chiều cao thực tế của nội dung
-        const originalHeight = element.style.height;
-        element.style.height = "auto";
-        const measuredHeight = element.scrollHeight;
-        element.style.height = originalHeight;
-
-        const currentHeight = parseInt(String(node.styles.height || "0"));
+      
+      if (wrapper && element) {
+        const originalWrapperHeight = wrapper.style.height;
+        const originalElementHeight = element.style.height;
         
-        if (measuredHeight > 0 && Math.abs(measuredHeight - currentHeight) > 1) {
-          updateNodeStyles(nodeId, { height: `${measuredHeight}px` });
+        // Giải phóng hoàn toàn để trình duyệt tính toán kích thước tự nhiên của nội dung
+        wrapper.style.height = "auto";
+        element.style.height = "auto";
+        
+        // Sử dụng getBoundingClientRect để lấy độ cao thực tế chính xác (kể cả số lẻ)
+        const measuredHeight = element.getBoundingClientRect().height;
+        
+        wrapper.style.height = originalWrapperHeight;
+        element.style.height = originalElementHeight;
+        
+        const currentHeightStr = String(node.styles.height || "0").replace('px', '');
+        const currentHeight = parseFloat(currentHeightStr);
+        
+        // Cập nhật Store nếu:
+        // 1. Chiều cao hiện tại là "auto" (NaN)
+        // 2. Sai lệch thực tế > 0.5px
+        if (measuredHeight > 0 && (isNaN(currentHeight) || Math.abs(measuredHeight - currentHeight) > 0.5)) {
+          updateNodeStyles(nodeId, { height: `${measuredHeight.toFixed(2)}px` });
         }
       }
     }
-  }, [isEditMode, nodeId, node?.props, node?.styles, updateNodeStyles]); 
+  }, [isEditMode, nodeId, node?.props, node?.styles, updateNodeStyles, isDraggingNode]); 
 
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
@@ -100,7 +125,8 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
       {...attributes}
       {...listeners}
       className={cn(
-        "relative transition-all duration-200 group",
+        "relative group",
+        !isDraggingNode && "transition-all duration-200",
         isEditMode && "hover:outline hover:outline-1 hover:outline-primary/50",
         isSelected && "z-30 cursor-pointer",
         isOver && node.type === "container" && "bg-primary/5 ring-2 ring-primary ring-inset",
@@ -109,12 +135,24 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
         isDragging && !isOverDroppable && "bg-destructive/20 ring-2 ring-destructive ring-inset"
       )}
       style={{
+        width: node.styles.width as any,
+        height: node.styles.height as any,
+        // Typography styles on wrapper for inheritance
+        fontSize: node.styles.fontSize as any,
+        fontWeight: (node.styles.fontWeight && typeof node.styles.fontWeight === 'string' && fontWeightMap[node.styles.fontWeight.toLowerCase()]) 
+          ? fontWeightMap[node.styles.fontWeight.toLowerCase()] 
+          : node.styles.fontWeight as any,
+        fontFamily: node.styles.fontFamily as any,
+        lineHeight: node.styles.lineHeight as any,
+        textAlign: node.styles.textAlign as any,
+        color: node.styles.color as any,
         ...(node.x !== undefined ? {
           left: `${node.x}px`,
           top: `${node.y}px`,
         } : {}),
         ...dragStyle
       }}
+      data-wrapper-id={nodeId}
     >
       {/* Corner Markers for Selection */}
       {isSelected && isEditMode && (
@@ -128,6 +166,7 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
           
           <div className={cn(
             "absolute inset-0 border pointer-events-none",
+            !isDraggingNode && "transition-all duration-200",
             isDragging ? "border-solid border-primary border-2" : "border-dashed border-primary"
           )} />
         </>
@@ -161,7 +200,16 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
       )}
       <Component 
         {...node.props} 
-        style={node.styles as React.CSSProperties} 
+        style={{
+          width: '100%',
+          height: '100%',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          fontFamily: 'inherit',
+          lineHeight: 'inherit',
+          textAlign: 'inherit',
+          color: 'inherit',
+        } as React.CSSProperties} 
         data-node-id={node.id}
         contentEditable={isEditMode && node.type !== "container" && node.type !== "image"}
         suppressContentEditableWarning={true}

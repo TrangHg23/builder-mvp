@@ -45,12 +45,12 @@ export const Inspector: React.FC = () => {
       // Nếu đổi level của Heading, cập nhật trọn bộ preset (font-size, weight, line-height, spacing)
       if (node.type === "heading" && propName === "level") {
         const presets: Record<string, any> = {
-          H1: { fontSize: "42px", fontWeight: "Extrabold", lineHeight: "1.1", letterSpacing: "-0.02em" },
-          H2: { fontSize: "32px", fontWeight: "Bold", lineHeight: "1.2", letterSpacing: "-0.01em" },
-          H3: { fontSize: "24px", fontWeight: "Semibold", lineHeight: "1.3", letterSpacing: "0" },
-          H4: { fontSize: "20px", fontWeight: "Semibold", lineHeight: "1.4", letterSpacing: "0" },
-          H5: { fontSize: "18px", fontWeight: "Medium", lineHeight: "1.4", letterSpacing: "0" },
-          H6: { fontSize: "16px", fontWeight: "Medium", lineHeight: "1.5", letterSpacing: "0" },
+          H1: { fontSize: "42px", fontWeight: "Bold", lineHeight: "1.1", letterSpacing: "-0.02em", height: "auto" },
+          H2: { fontSize: "32px", fontWeight: "Bold", lineHeight: "1.2", letterSpacing: "-0.01em", height: "auto" },
+          H3: { fontSize: "24px", fontWeight: "Semibold", lineHeight: "1.3", letterSpacing: "0", height: "auto" },
+          H4: { fontSize: "20px", fontWeight: "Semibold", lineHeight: "1.4", letterSpacing: "0", height: "auto" },
+          H5: { fontSize: "18px", fontWeight: "Medium", lineHeight: "1.4", letterSpacing: "0", height: "auto" },
+          H6: { fontSize: "16px", fontWeight: "Medium", lineHeight: "1.5", letterSpacing: "0", height: "auto" },
         };
         
         const newStyles = presets[value as string] || presets.H2;
