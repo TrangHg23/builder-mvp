@@ -39,6 +39,23 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
   const node = nodes[nodeId];
   const isSelected = selectedNodeId === nodeId;
   const isEditMode = mode === "edit";
+  const [isEditing, setIsEditing] = React.useState(false);
+  const componentRef = React.useRef<HTMLElement>(null);
+
+  // Auto-focus when entering edit mode
+  React.useEffect(() => {
+    if (isEditing && componentRef.current) {
+      componentRef.current.focus();
+      
+      // Di chuyển con trỏ xuống cuối văn bản
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(componentRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  }, [isEditing]);
 
   // Tự động cập nhật chiều cao khung bao khi props (như Level H1-H6) hoặc styles thay đổi
   React.useEffect(() => {
@@ -112,6 +129,12 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
     if (!isEditMode) return;
     e.stopPropagation();
     selectNode(nodeId);
+    
+    // Đảm bảo focus không bị kẹt ở các input khác (như trong Inspector) 
+    // để các phím tắt (Delete, Backspace) có thể hoạt động.
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
   };
 
   const dragStyle = transform ? {
@@ -132,7 +155,8 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
         isOver && node.type === "container" && "bg-primary/5 ring-2 ring-primary ring-inset",
         node.x !== undefined && "absolute",
         isDragging && "z-50 pointer-events-none cursor-grabbing",
-        isDragging && !isOverDroppable && "bg-destructive/20 ring-2 ring-destructive ring-inset"
+        isDragging && !isOverDroppable && "bg-destructive/20 ring-2 ring-destructive ring-inset",
+        isEditMode && !isEditing && "select-none"
       )}
       style={{
         width: node.styles.width as any,
@@ -200,6 +224,7 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
       )}
       <Component 
         {...node.props} 
+        ref={componentRef as any}
         style={{
           width: '100%',
           height: '100%',
@@ -209,22 +234,32 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
           lineHeight: 'inherit',
           textAlign: 'inherit',
           color: 'inherit',
+          cursor: isEditMode ? (isEditing ? "text" : "pointer") : "inherit",
         } as React.CSSProperties} 
         data-node-id={node.id}
-        contentEditable={isEditMode && node.type !== "container" && node.type !== "image"}
+        contentEditable={isEditMode && isEditing && node.type !== "container" && node.type !== "image"}
         suppressContentEditableWarning={true}
+        onDoubleClick={(e: React.MouseEvent) => {
+          if (!isEditMode || node.type === "container" || node.type === "image") return;
+          e.stopPropagation();
+          setIsEditing(true);
+        }}
         onInput={(e: React.SyntheticEvent<HTMLElement>) => {
           // Chỉ cập nhật chiều cao khi đang gõ để khung bao giãn nở mượt mà
           const measuredHeight = e.currentTarget.scrollHeight;
           updateNodeStyles(nodeId, { height: `${measuredHeight}px` });
         }}
         onBlur={(e: React.FocusEvent<HTMLElement>) => {
+          setIsEditing(false);
           // Chỉ lưu nội dung text vào Store khi người dùng đã gõ xong (click ra ngoài)
           const newText = e.currentTarget.innerText;
           const propName = node.type === "text" ? "content" : "text";
           updateNodeProps(nodeId, { [propName]: newText });
         }}
         onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === "Escape") {
+            (e.currentTarget as HTMLElement).blur();
+          }
           // Ngăn chặn sự kiện lan ra ngoài khi đang gõ chữ (tránh kích hoạt các phím tắt của Editor)
           e.stopPropagation();
         }}

@@ -48,7 +48,7 @@ export const useEditorDnd = () => {
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 10,
+        distance: 5,
       },
     }),
     useSensor(TouchSensor, {
@@ -70,6 +70,7 @@ export const useEditorDnd = () => {
     // Set global cursor to grabbing only if we are moving a node, not resizing
     if (activeItem.data.current?.type !== "resize-handle") {
       document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
       setDnDStatus(true, false);
     }
     
@@ -240,8 +241,9 @@ export const useEditorDnd = () => {
     setActive(null);
     setActiveId(null);
     setIsOverDroppable(false);
-    // Reset global cursor
+    // Reset global cursor and selection
     document.body.style.cursor = '';
+    document.body.style.userSelect = '';
 
     // Final Commit Phase for Resize
     if (resizeRef.current) {
