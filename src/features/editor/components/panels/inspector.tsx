@@ -41,6 +41,21 @@ export const Inspector: React.FC = () => {
       updateNodeStyles(node.id, { [propName]: value });
     } else {
       updateNodeProps(node.id, { [propName]: value });
+      
+      // Nếu đổi level của Heading, cập nhật trọn bộ preset (font-size, weight, line-height, spacing)
+      if (node.type === "heading" && propName === "level") {
+        const presets: Record<string, any> = {
+          H1: { fontSize: "42px", fontWeight: "Extrabold", lineHeight: "1.1", letterSpacing: "-0.02em" },
+          H2: { fontSize: "32px", fontWeight: "Bold", lineHeight: "1.2", letterSpacing: "-0.01em" },
+          H3: { fontSize: "24px", fontWeight: "Semibold", lineHeight: "1.3", letterSpacing: "0" },
+          H4: { fontSize: "20px", fontWeight: "Semibold", lineHeight: "1.4", letterSpacing: "0" },
+          H5: { fontSize: "18px", fontWeight: "Medium", lineHeight: "1.4", letterSpacing: "0" },
+          H6: { fontSize: "16px", fontWeight: "Medium", lineHeight: "1.5", letterSpacing: "0" },
+        };
+        
+        const newStyles = presets[value as string] || presets.H2;
+        updateNodeStyles(node.id, newStyles);
+      }
     }
   };
 
@@ -74,11 +89,13 @@ export const Inspector: React.FC = () => {
 
                   return (
                     <div key={control.propName} className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Typography variant="small" className="text-foreground/70 font-medium">
-                          {control.label}
-                        </Typography>
-                      </div>
+                      {control.label && (
+                        <div className="flex items-center justify-between">
+                          <Typography variant="small" className="text-foreground/70 font-medium">
+                            {control.label}
+                          </Typography>
+                        </div>
+                      )}
                       
                       {control.type === "text" && (
                         <Input 

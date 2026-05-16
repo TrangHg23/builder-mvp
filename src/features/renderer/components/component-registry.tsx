@@ -34,14 +34,35 @@ export interface NodeDefinition<TProps = any> {
 // RENDERERS
 
 // Heading Renderer
+const fontWeightMap: Record<string, number> = {
+  thin: 100,
+  light: 300,
+  normal: 400,
+  medium: 500,
+  semibold: 600,
+  bold: 700,
+  extrabold: 800,
+  black: 900,
+};
+
 const HeadingRenderer: React.FC<{
   text: string;
-  level: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  level: string;
   style?: React.CSSProperties;
 }> = ({ text, level = "h2", style, ...props }) => {
-  const Tag = level;
+  const Tag = (level.toLowerCase() || "h2") as any;
+  
+  // Convert descriptive font weight to numeric for CSS
+  const finalStyle = { ...style };
+  if (style?.fontWeight && typeof style.fontWeight === "string") {
+    const weightName = style.fontWeight.toLowerCase();
+    if (fontWeightMap[weightName]) {
+      finalStyle.fontWeight = fontWeightMap[weightName];
+    }
+  }
+
   return (
-    <Tag style={style} {...props}>
+    <Tag style={finalStyle} {...props}>
       {text}
     </Tag>
   );
@@ -134,13 +155,13 @@ export const componentRegistry: Record<string, NodeDefinition> = {
     label: "Heading",
     defaultProps: {
       text: "Heading",
-      level: "h1",
+      level: "H1",
     },
     defaultStyles: {
       width: "200px",
       height: "51px",
       fontSize: "42px",
-      fontWeight: "bold",
+      fontWeight: "Bold",
       fontFamily: "Montserrat, sans-serif",
       lineHeight: "1.2",
       letterSpacing: "-0.5px",
@@ -163,12 +184,11 @@ export const componentRegistry: Record<string, NodeDefinition> = {
         {
           title: "Content",
           controls: [
-            { label: "Text", propName: "text", type: "text" },
             { 
-              label: "Level", 
+              label: "", 
               propName: "level", 
               type: "select", 
-              options: ["h1", "h2", "h3", "h4", "h5", "h6"] 
+              options: ["H1", "H2", "H3", "H4", "H5", "H6"] 
             },
           ],
         },
@@ -176,7 +196,7 @@ export const componentRegistry: Record<string, NodeDefinition> = {
           title: "Typography",
           controls: [
             { label: "Font Family", propName: "fontFamily", type: "text", isStyle: true },
-            { label: "Weight", propName: "fontWeight", type: "select", options: ["normal", "bold", "500", "600", "700", "800"], isStyle: true },
+            { label: "Weight", propName: "fontWeight", type: "select", options: ["thin", "light", "normal", "medium", "semibold", "bold", "extrabold", "black"], isStyle: true },
             { label: "Size", propName: "fontSize", type: "text", isStyle: true },
             { label: "Line Height", propName: "lineHeight", type: "text", isStyle: true },
             { label: "Letter Spacing", propName: "letterSpacing", type: "text", isStyle: true },
@@ -200,12 +220,6 @@ export const componentRegistry: Record<string, NodeDefinition> = {
     renderer: TextRenderer,
     inspectorTabs: {
       design: [
-        {
-          title: "Content",
-          controls: [
-            { label: "Text", propName: "content", type: "text" },
-          ],
-        },
         {
           title: "Typography",
           controls: [
@@ -266,12 +280,6 @@ export const componentRegistry: Record<string, NodeDefinition> = {
     renderer: ButtonRenderer,
     inspectorTabs: {
       design: [
-        {
-          title: "Content",
-          controls: [
-            { label: "Button Text", propName: "text", type: "text" },
-          ],
-        },
         {
           title: "Appearance",
           controls: [

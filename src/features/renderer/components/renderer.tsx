@@ -20,12 +20,34 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
     selectNode, 
     mode, 
     removeNode,
-    isDraggingNode,
+    updateNodeProps,
+    updateNodeStyles,
     isOverDroppable
   } = useEditorStore();
   const node = nodes[nodeId];
   const isSelected = selectedNodeId === nodeId;
   const isEditMode = mode === "edit";
+
+  // Tự động cập nhật chiều cao khung bao khi props (như Level H1-H6) hoặc styles thay đổi
+  React.useEffect(() => {
+    if (isEditMode && nodeId !== "root") {
+      const element = document.querySelector(`[data-node-id="${nodeId}"]`) as HTMLElement;
+      if (element) {
+        // Tạm thời bỏ height cố định để đo chiều cao thực tế của nội dung
+        const originalHeight = element.style.height;
+        element.style.height = "auto";
+        const measuredHeight = element.scrollHeight;
+        element.style.height = originalHeight;
+
+        const currentHeight = parseInt(String(node.styles.height || "0"));
+        
+        if (measuredHeight > 0 && Math.abs(measuredHeight - currentHeight) > 1) {
+          updateNodeStyles(nodeId, { height: `${measuredHeight}px` });
+        }
+      }
+    }
+  }, [isEditMode, nodeId, node?.props, node?.styles, updateNodeStyles]); 
+
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: nodeId,
@@ -137,7 +159,34 @@ export const Renderer: React.FC<RendererProps> = ({ nodeId }) => {
           {definition.label}
         </div>
       )}
-      <Component {...node.props} style={node.styles as React.CSSProperties} data-node-id={node.id}>
+      <Component 
+        {...node.props} 
+        style={node.styles as React.CSSProperties} 
+        data-node-id={node.id}
+        contentEditable={isEditMode && node.type !== "container" && node.type !== "image"}
+        suppressContentEditableWarning={true}
+        onInput={(e: React.SyntheticEvent<HTMLElement>) => {
+          // Chỉ cập nhật chiều cao khi đang gõ để khung bao giãn nở mượt mà
+          const measuredHeight = e.currentTarget.scrollHeight;
+          updateNodeStyles(nodeId, { height: `${measuredHeight}px` });
+        }}
+        onBlur={(e: React.FocusEvent<HTMLElement>) => {
+          // Chỉ lưu nội dung text vào Store khi người dùng đã gõ xong (click ra ngoài)
+          const newText = e.currentTarget.innerText;
+          const propName = node.type === "text" ? "content" : "text";
+          updateNodeProps(nodeId, { [propName]: newText });
+        }}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          // Ngăn chặn sự kiện lan ra ngoài khi đang gõ chữ (tránh kích hoạt các phím tắt của Editor)
+          e.stopPropagation();
+        }}
+        onMouseDown={(e: React.MouseEvent) => {
+          // Nếu đang edit chữ, ngăn chặn sự kiện mousedown để không kích hoạt Drag của dnd-kit
+          if (isEditMode && document.activeElement === e.currentTarget) {
+            e.stopPropagation();
+          }
+        }}
+      >
         {node.children.length === 0 && node.type === "container" && isEditMode && (
           <div className="flex items-center justify-center p-8 border-2 border-dashed border-muted-foreground/20 rounded-lg text-muted-foreground/40 text-sm italic">
             Drop components here
