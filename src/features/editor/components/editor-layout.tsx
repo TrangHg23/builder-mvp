@@ -59,8 +59,10 @@ export const EditorLayout: React.FC = () => {
             <button
               onClick={() => setMode("edit")}
               className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
-                mode === "edit" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-300",
+                mode === "edit" 
+                  ? "bg-gradient-to-r from-[#3c79d9] to-[#6366f1] text-white shadow-[0_2px_8px_rgba(60,121,217,0.3)]" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Edit2 size={14} />
@@ -69,8 +71,10 @@ export const EditorLayout: React.FC = () => {
             <button
               onClick={() => setMode("preview")}
               className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
-                mode === "preview" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-300",
+                mode === "preview" 
+                  ? "bg-gradient-to-r from-[#3c79d9] to-[#6366f1] text-white shadow-[0_2px_8px_rgba(60,121,217,0.3)]" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Eye size={14} />
@@ -84,7 +88,7 @@ export const EditorLayout: React.FC = () => {
             variant="default" 
             size="sm" 
             onClick={handleSave}
-            className="bg-[#3c79d9] hover:bg-[#3c79d9]/90 text-white font-medium gap-2 px-4"
+            className="bg-gradient-to-r from-[#3c79d9] to-[#6366f1] hover:from-[#3c79d9]/90 hover:to-[#6366f1]/90 text-white font-bold gap-2 px-5 shadow-[0_4px_12px_rgba(60,121,217,0.3)] border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Save size={16} />
             Save
