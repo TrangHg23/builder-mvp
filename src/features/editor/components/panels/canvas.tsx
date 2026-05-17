@@ -10,7 +10,12 @@ export const Canvas: React.FC = () => {
   return (
     <div 
       className="min-h-full p-8 flex items-start justify-center"
-      onClick={() => selectNode(null)}
+      onClick={() => {
+        selectNode(null);
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }}
     >
       <div 
         className="w-full max-w-5xl bg-background shadow-xl min-h-[1000px] rounded-sm ring-1 ring-border relative"

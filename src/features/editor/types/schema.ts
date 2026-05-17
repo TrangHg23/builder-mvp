@@ -26,5 +26,7 @@ export interface EditorState {
   rootNodeId: NodeId;
   selectedNodeId: NodeId | null;
   draggedNodeId: NodeId | null;
+  isDraggingNode: boolean;
+  isOverDroppable: boolean;
   mode: "edit" | "preview";
 }

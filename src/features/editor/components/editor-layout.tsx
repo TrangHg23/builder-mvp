@@ -5,163 +5,38 @@ import { ComponentLibrary } from "./panels/component-library";
 import { Canvas } from "./panels/canvas";
 import { Inspector } from "./panels/inspector";
 import { useEditorStore } from "../stores/use-editor-store";
-import { Edit2, Eye, Save } from "lucide-react";
+import { Edit2, Eye, Save, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 import { 
   DndContext, 
-  DragEndEvent, 
-  MouseSensor, 
-  TouchSensor, 
-  useSensor, 
-  useSensors,
   DragOverlay,
-  DragStartEvent,
-  DragOverEvent
 } from "@dnd-kit/core";
-import { nanoid } from "nanoid";
-import { componentRegistry } from "@/features/renderer/components/component-registry";
-import { Ban } from "lucide-react";
 import { Logo } from "@/components/header/logo";
+import { useEditorDnd } from "../hooks/use-editor-dnd";
+import { useEditorShortcuts } from "../hooks/use-editor-shortcuts";
+import { useEditorActions } from "../hooks/use-editor-actions";
 
 export const EditorLayout: React.FC = () => {
-  const { mode, setMode, nodes, addNode, selectNode, updateNodePosition, removeNode, selectedNodeId } = useEditorStore();
-  const [activeId, setActiveId] = React.useState<string | null>(null);
-  const [isOverDroppable, setIsOverDroppable] = React.useState(false);
+  const { mode, setMode } = useEditorStore();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input/textarea/editable field
-      const isTyping = 
-        e.target instanceof HTMLInputElement || 
-        e.target instanceof HTMLTextAreaElement ||
-        (e.target as HTMLElement).isContentEditable;
-
-      if (isTyping) return;
-
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedNodeId) {
-        removeNode(selectedNodeId);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedNodeId, removeNode]);
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 10,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    })
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-    setIsOverDroppable(false);
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    setIsOverDroppable(!!event.over);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    setIsOverDroppable(false);
-
-    if (over && active.data.current?.type === "library-item") {
-      const componentType = active.data.current.componentType;
-      const definition = componentRegistry[componentType];
-      
-      if (definition) {
-        const newNodeId = nanoid();
-        
-        // Calculate position relative to the 'over' element
-        const overRect = over.rect;
-        const activeRect = active.rect.current.translated;
-        
-        let x = 0;
-        let y = 0;
-        
-        if (activeRect && overRect) {
-          x = Math.max(0, activeRect.left - overRect.left);
-          y = Math.max(0, activeRect.top - overRect.top);
-          
-          // Clamp to right/bottom edges for new items
-          if (activeRect.width && overRect.width) {
-            x = Math.min(x, overRect.width - activeRect.width);
-          }
-          if (activeRect.height && overRect.height) {
-            y = Math.min(y, overRect.height - activeRect.height);
-          }
-        }
-
-        const newNode = {
-          id: newNodeId,
-          type: componentType,
-          props: { ...definition.defaultProps },
-          styles: { ...definition.defaultStyles },
-          children: [],
-          parentId: over.id as string,
-          x,
-          y,
-        };
-
-        addNode(newNode, over.id as string);
-        selectNode(newNodeId);
-      }
-    } else if (over && active.data.current?.type === "canvas-node") {
-      const nodeId = active.data.current.nodeId;
-      const node = nodes[nodeId];
-      const overRect = over.rect;
-      const activeRect = active.rect.current.translated;
-
-      if (node && overRect && activeRect) {
-        // Calculate new position relative to the drop target
-        let newX = activeRect.left - overRect.left;
-        let newY = activeRect.top - overRect.top;
-        
-        // Clamping logic: Prevent moving outside the container
-        // We ensure x and y are at least 0
-        newX = Math.max(0, newX);
-        newY = Math.max(0, newY);
-        
-        // Optional: Prevent moving past the right/bottom edge 
-        // (This requires knowing the active element width/height)
-        if (activeRect.width && overRect.width) {
-          newX = Math.min(newX, overRect.width - activeRect.width);
-        }
-        if (activeRect.height && overRect.height) {
-          newY = Math.min(newY, overRect.height - activeRect.height);
-        }
-
-        updateNodePosition(nodeId, newX, newY);
-      }
-    }
-  };
-
-  const handleSave = () => {
-    const dataStr = JSON.stringify(nodes, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = 'site-schema.json';
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
+  useEditorShortcuts();
+  const { handleSave } = useEditorActions();
+  const {
+    sensors,
+    active,
+    activeId,
+    isOverDroppable,
+    handleDragStart,
+    handleDragOver,
+    handleDragMove,
+    handleDragEnd,
+  } = useEditorDnd();
 
   if (!mounted) return <div className="h-screen bg-background" />;
 
@@ -170,6 +45,7 @@ export const EditorLayout: React.FC = () => {
       sensors={sensors} 
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col h-screen overflow-hidden bg-background" data-mode={mode}>
@@ -183,8 +59,10 @@ export const EditorLayout: React.FC = () => {
             <button
               onClick={() => setMode("edit")}
               className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
-                mode === "edit" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-300",
+                mode === "edit" 
+                  ? "bg-gradient-to-r from-[#3c79d9] to-[#6366f1] text-white shadow-[0_2px_8px_rgba(60,121,217,0.3)]" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Edit2 size={14} />
@@ -193,8 +71,10 @@ export const EditorLayout: React.FC = () => {
             <button
               onClick={() => setMode("preview")}
               className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
-                mode === "preview" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-300",
+                mode === "preview" 
+                  ? "bg-gradient-to-r from-[#3c79d9] to-[#6366f1] text-white shadow-[0_2px_8px_rgba(60,121,217,0.3)]" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Eye size={14} />
@@ -208,7 +88,7 @@ export const EditorLayout: React.FC = () => {
             variant="default" 
             size="sm" 
             onClick={handleSave}
-            className="bg-[#3c79d9] hover:bg-[#3c79d9]/90 text-white font-medium gap-2 px-4"
+            className="bg-gradient-to-r from-[#3c79d9] to-[#6366f1] hover:from-[#3c79d9]/90 hover:to-[#6366f1]/90 text-white font-bold gap-2 px-5 shadow-[0_4px_12px_rgba(60,121,217,0.3)] border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Save size={16} />
             Save
@@ -239,7 +119,7 @@ export const EditorLayout: React.FC = () => {
         </aside>
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeId ? (
+        {active && active.data.current?.type === "library-item" ? (
           <div className={cn(
             "px-4 py-2 rounded-md shadow-lg transition-all duration-200 border flex items-center gap-2",
             isOverDroppable 
@@ -247,7 +127,9 @@ export const EditorLayout: React.FC = () => {
               : "bg-destructive/20 text-destructive border-destructive/50 cursor-no-drop backdrop-blur-sm"
           )}>
             {!isOverDroppable && <Ban size={14} />}
-            <span className="font-medium text-sm">{activeId}</span>
+            <span className="font-medium text-sm capitalize">
+              {active.data.current.componentType}
+            </span>
           </div>
         ) : null}
       </DragOverlay>

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-export type ControlType = "text" | "number" | "color" | "select" | "switch";
+export type ControlType = "text" | "number" | "color" | "select" | "switch" | "toggle-group";
 
 export interface ControlDefinition {
   label: string;
@@ -36,10 +36,11 @@ export interface NodeDefinition<TProps = any> {
 // Heading Renderer
 const HeadingRenderer: React.FC<{
   text: string;
-  level: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  level: string;
   style?: React.CSSProperties;
 }> = ({ text, level = "h2", style, ...props }) => {
-  const Tag = level;
+  const Tag = (level.toLowerCase() || "h2") as any;
+  
   return (
     <Tag style={style} {...props}>
       {text}
@@ -134,14 +135,14 @@ export const componentRegistry: Record<string, NodeDefinition> = {
     label: "Heading",
     defaultProps: {
       text: "Heading",
-      level: "h1",
+      level: "H1",
     },
     defaultStyles: {
       width: "200px",
       height: "51px",
       fontSize: "42px",
-      fontWeight: "bold",
-      fontFamily: "Montserrat, sans-serif",
+      fontWeight: "800",
+      fontFamily: "Montserrat",
       lineHeight: "1.2",
       letterSpacing: "-0.5px",
       textAlign: "left",
@@ -163,25 +164,23 @@ export const componentRegistry: Record<string, NodeDefinition> = {
         {
           title: "Content",
           controls: [
-            { label: "Text", propName: "text", type: "text" },
             { 
-              label: "Level", 
+              label: "", 
               propName: "level", 
               type: "select", 
-              options: ["h1", "h2", "h3", "h4", "h5", "h6"] 
+              options: ["H1", "H2", "H3", "H4", "H5", "H6"] 
             },
           ],
         },
         {
           title: "Typography",
           controls: [
-            { label: "Font Family", propName: "fontFamily", type: "text", isStyle: true },
-            { label: "Weight", propName: "fontWeight", type: "select", options: ["normal", "bold", "500", "600", "700", "800"], isStyle: true },
+            { label: "Font Family", propName: "fontFamily", type: "select", options: ["Inter", "Roboto", "Montserrat", "Playfair Display", "Merriweather", "JetBrains Mono"], isStyle: true },
+            { label: "Weight", propName: "fontWeight", type: "select", options: ["Light", "Regular", "Medium", "Semi Bold", "Bold", "Extra Bold"], isStyle: true },
             { label: "Size", propName: "fontSize", type: "text", isStyle: true },
             { label: "Line Height", propName: "lineHeight", type: "text", isStyle: true },
             { label: "Letter Spacing", propName: "letterSpacing", type: "text", isStyle: true },
-            { label: "Align", propName: "textAlign", type: "select", options: ["left", "center", "right", "justify"], isStyle: true },
-            { label: "Color", propName: "color", type: "color", isStyle: true },
+            { label: "Alignment", propName: "textAlign", type: "toggle-group", options: ["left", "center", "right", "justify"], isStyle: true },
           ],
         },
       ],
@@ -195,21 +194,24 @@ export const componentRegistry: Record<string, NodeDefinition> = {
     },
     defaultStyles: {
       fontSize: "16px",
+      fontWeight: "400",
+      fontFamily: "Inter",
+      lineHeight: "1.5",
+      textAlign: "left",
       color: "inherit",
     },
     renderer: TextRenderer,
     inspectorTabs: {
       design: [
         {
-          title: "Content",
-          controls: [
-            { label: "Text", propName: "content", type: "text" },
-          ],
-        },
-        {
           title: "Typography",
           controls: [
+            { label: "Font Family", propName: "fontFamily", type: "select", options: ["Inter", "Roboto", "Montserrat", "Playfair Display", "Merriweather", "JetBrains Mono"], isStyle: true },
+            { label: "Weight", propName: "fontWeight", type: "select", options: ["Light", "Regular", "Medium", "Semi Bold", "Bold", "Extra Bold"], isStyle: true },
             { label: "Size", propName: "fontSize", type: "text", isStyle: true },
+            { label: "Line Height", propName: "lineHeight", type: "text", isStyle: true },
+            { label: "Letter Spacing", propName: "letterSpacing", type: "text", isStyle: true },
+            { label: "Alignment", propName: "textAlign", type: "toggle-group", options: ["left", "center", "right", "justify"], isStyle: true },
             { label: "Color", propName: "color", type: "color", isStyle: true },
           ],
         },
@@ -262,16 +264,12 @@ export const componentRegistry: Record<string, NodeDefinition> = {
       cursor: "pointer",
       fontSize: "14px",
       fontWeight: "500",
+      fontFamily: "Inter",
+      textAlign: "center",
     },
     renderer: ButtonRenderer,
     inspectorTabs: {
       design: [
-        {
-          title: "Content",
-          controls: [
-            { label: "Button Text", propName: "text", type: "text" },
-          ],
-        },
         {
           title: "Appearance",
           controls: [
@@ -279,6 +277,15 @@ export const componentRegistry: Record<string, NodeDefinition> = {
             { label: "Text Color", propName: "color", type: "color", isStyle: true },
             { label: "Padding", propName: "padding", type: "text", isStyle: true },
             { label: "Radius", propName: "borderRadius", type: "text", isStyle: true },
+          ],
+        },
+        {
+          title: "Typography",
+          controls: [
+            { label: "Font Family", propName: "fontFamily", type: "select", options: ["Inter", "Roboto", "Montserrat", "Playfair Display", "Merriweather", "JetBrains Mono"], isStyle: true },
+            { label: "Weight", propName: "fontWeight", type: "select", options: ["300", "400", "500", "600", "700", "800"], isStyle: true },
+            { label: "Size", propName: "fontSize", type: "text", isStyle: true },
+            { label: "Alignment", propName: "textAlign", type: "toggle-group", options: ["left", "center", "right", "justify"], isStyle: true },
           ],
         },
       ],

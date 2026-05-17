@@ -11,6 +11,7 @@ interface EditorActions {
   moveNode: (id: NodeId, targetParentId: NodeId, index: number) => void;
   updateNodePosition: (id: NodeId, x: number, y: number) => void;
   setMode: (mode: "edit" | "preview") => void;
+  setDnDStatus: (isDragging: boolean, isOver: boolean) => void;
 }
 
 const initialState: EditorState = {
@@ -32,6 +33,8 @@ const initialState: EditorState = {
   rootNodeId: "root",
   selectedNodeId: null,
   draggedNodeId: null,
+  isDraggingNode: false,
+  isOverDroppable: false,
   mode: "edit",
 };
 
@@ -167,6 +170,11 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             },
           };
         }),
+
+      setDnDStatus: (isDragging, isOver) => set({ 
+        isDraggingNode: isDragging, 
+        isOverDroppable: isOver 
+      }),
 
       setMode: (mode) => set({ mode }),
     }),
